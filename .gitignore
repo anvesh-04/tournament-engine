@@ -1,4 +1,16 @@
 node_modules/
 .env
+.env.*
+!.env.example
 dist/
+
+# Local database exports. Data dumps do not belong in source control.
+backups/
 .DS_Store
+
+# Agent skill packs and local tool config installed via `npx skills add` /
+# `npx impeccable install`. Vendored tooling, not project source.
+.agents/
+.claude/
+.codex/
+skills-lock.json
