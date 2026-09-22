@@ -1,8 +1,12 @@
 import React, { useState } from "react";
-import { updateMatch } from "../api.js";
+import { updateMatch, errorMessage } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 export default function BracketView({ tournament, onUpdate }) {
   const [error, setError] = useState(null);
+  // Recording a winner is an admin action; a signed-out visitor reading the
+  // bracket should not be offered a control that will be refused.
+  const { isAdmin } = useAuth();
 
   const rounds = {};
   tournament.matches.forEach((m) => {
@@ -25,7 +29,7 @@ export default function BracketView({ tournament, onUpdate }) {
       const updated = await updateMatch(tournament._id, match.matchRefId, { winner });
       onUpdate(updated);
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
+      setError(errorMessage(err));
     }
   };
 
@@ -44,14 +48,14 @@ export default function BracketView({ tournament, onUpdate }) {
                     isWinner={!!m.winner && m.winner === m.teamA}
                     isBye={m.status === "COMPLETED" && !m.teamB}
                     onClick={() => m.teamA && m.teamB && !m.winner && declareWinner(m, m.teamA)}
-                    clickable={!!(m.teamA && m.teamB && !m.winner)}
+                    clickable={isAdmin && !!(m.teamA && m.teamB && !m.winner)}
                   />
                   <TeamLine
                     name={m.teamB}
                     isWinner={!!m.winner && m.winner === m.teamB}
                     isBye={m.status === "COMPLETED" && !m.teamB}
                     onClick={() => m.teamA && m.teamB && !m.winner && declareWinner(m, m.teamB)}
-                    clickable={!!(m.teamA && m.teamB && !m.winner)}
+                    clickable={isAdmin && !!(m.teamA && m.teamB && !m.winner)}
                   />
                 </div>
               ))}
@@ -59,10 +63,12 @@ export default function BracketView({ tournament, onUpdate }) {
           </div>
         ))}
       </div>
-      <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 16 }}>
-        Click a team name in an active match to declare them the winner and advance them
-        automatically to the next round.
-      </p>
+      {isAdmin && (
+        <p className="field-hint" style={{ marginTop: 20 }}>
+          Select a team in an active match to record them as the winner. They advance
+          to the next round automatically.
+        </p>
+      )}
     </div>
   );
 }
@@ -73,14 +79,29 @@ function TeamLine({ name, isWinner, isBye, onClick, clickable }) {
   if (isWinner) classes.push("winner");
   if (!name) classes.push("tbd");
 
+  // Declaring a winner is a real action, so when the line is live it behaves
+  // like a button: reachable by Tab, activated by Enter or Space, and
+  // announced as such. A bare onClick on a div is none of those things.
+  const interactive = clickable
+    ? {
+        role: "button",
+        tabIndex: 0,
+        onClick,
+        onKeyDown: (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        },
+        "aria-label": `Record ${label} as the winner`,
+        style: { cursor: "pointer" },
+      }
+    : {};
+
   return (
-    <div
-      className={classes.join(" ")}
-      style={{ cursor: clickable ? "pointer" : "default" }}
-      onClick={onClick}
-    >
+    <div className={classes.join(" ")} {...interactive}>
       <span>{label}</span>
-      {isWinner && <span>&#10003;</span>}
+      {isWinner && <span aria-hidden="true">&#10003;</span>}
     </div>
   );
 }

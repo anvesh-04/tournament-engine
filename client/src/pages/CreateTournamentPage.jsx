@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createTournament, generateFixtures } from "../api.js";
+import { createTournament, generateFixtures, listTeams, listSports } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 export default function CreateTournamentPage() {
+  const { isSuperAdmin } = useAuth();
   const [name, setName] = useState("");
   const [format, setFormat] = useState("round-robin");
   const [numCourts, setNumCourts] = useState(2);
@@ -11,6 +13,32 @@ export default function CreateTournamentPage() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+
+  // Registered teams, offered as one-click entries. Fixture team names are
+  // plain strings, and the notification lookup resolves players by matching
+  // those strings back to Team documents — so a name typed freehand that does
+  // not match a registered team produces a tournament whose players can never
+  // be notified. Picking from this list avoids that silently happening.
+  const [registeredTeams, setRegisteredTeams] = useState([]);
+  const [sports, setSports] = useState([]);
+  const [sportId, setSportId] = useState("");
+
+  useEffect(() => {
+    listTeams()
+      .then(setRegisteredTeams)
+      .catch(() => setRegisteredTeams([]));
+    if (isSuperAdmin) {
+      listSports()
+        .then(setSports)
+        .catch(() => setSports([]));
+    }
+  }, [isSuperAdmin]);
+
+  // A super-admin scopes by the chosen sport; a sport-admin only ever sees
+  // their own teams, so no filtering is needed for them.
+  const availableTeams = registeredTeams.filter(
+    (t) => !isSuperAdmin || !sportId || String(t.sportId) === sportId
+  );
 
   const addTeam = () => {
     const trimmed = teamInput.trim();
@@ -37,12 +65,17 @@ export default function CreateTournamentPage() {
 
     setSubmitting(true);
     try {
-      const tournament = await createTournament({
+      const payload = {
         name: name.trim(),
         format,
         numCourts: Number(numCourts),
         teamNames,
-      });
+      };
+      // Ignored by the server for a sport-admin, who is always pinned to their
+      // own sport regardless of what the body says.
+      if (isSuperAdmin && sportId) payload.sportId = sportId;
+
+      const tournament = await createTournament(payload);
       // Immediately run the algorithm to generate fixtures
       await generateFixtures(tournament._id);
       navigate(`/tournament/${tournament._id}`);
@@ -64,6 +97,23 @@ export default function CreateTournamentPage() {
         onChange={(e) => setName(e.target.value)}
         placeholder="e.g. Inter-Hostel Volleyball Cup"
       />
+
+      {isSuperAdmin && (
+        <>
+          <label>Sport</label>
+          <select value={sportId} onChange={(e) => setSportId(e.target.value)}>
+            <option value="">Not assigned to a sport</option>
+            {sports.map((s) => (
+              <option key={s._id} value={s._id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <div className="field-hint">
+            A tournament with no sport is only visible to super-admins.
+          </div>
+        </>
+      )}
 
       <label>Format</label>
       <select value={format} onChange={(e) => setFormat(e.target.value)}>
@@ -96,6 +146,35 @@ export default function CreateTournamentPage() {
           Add
         </button>
       </div>
+
+      {availableTeams.length > 0 && (
+        <>
+          <div className="field-hint" style={{ marginTop: 12 }}>
+            Or add a registered team — only these can have their players notified
+            when the schedule changes.
+          </div>
+          <div className="team-tag-list">
+            {availableTeams.map((t) => {
+              const added = teamNames.includes(t.name);
+              return (
+                <button
+                  type="button"
+                  key={t._id}
+                  className="team-tag pickable"
+                  disabled={added}
+                  onClick={() => {
+                    setTeamNames([...teamNames, t.name]);
+                    setError(null);
+                  }}
+                >
+                  {added ? "✓ " : "+ "}
+                  {t.name}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <div className="team-tag-list">
         {teamNames.map((t) => (

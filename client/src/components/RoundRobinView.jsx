@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { updateMatch } from "../api.js";
+import { updateMatch, errorMessage } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 const statusClass = {
   PENDING: "status-pending",
@@ -10,6 +11,9 @@ const statusClass = {
 export default function RoundRobinView({ tournament, onUpdate }) {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState(null);
+  // Only an admin can actually save a change. Rendering an Edit button for
+  // everyone else just produces a 401 after they have filled the form in.
+  const { isAdmin } = useAuth();
 
   const matches = [...tournament.matches].sort(
     (a, b) => a.timeSlot - b.timeSlot || a.court - b.court
@@ -25,7 +29,7 @@ export default function RoundRobinView({ tournament, onUpdate }) {
       onUpdate(updated);
       setEditingId(null);
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
+      setError(errorMessage(err));
     }
   };
 
@@ -35,11 +39,11 @@ export default function RoundRobinView({ tournament, onUpdate }) {
       <div className="slot-grid">
         {matches.map((m) => (
           <div className="match-row" key={m.matchRefId}>
-            <div className="slot-label">SLOT {m.timeSlot}</div>
+            <div className="slot-label">Slot {m.timeSlot}</div>
             <div className="teams">
               {m.teamA} <span className="vs">vs</span> {m.teamB}
             </div>
-            {editingId === m.matchRefId ? (
+            {isAdmin && editingId === m.matchRefId ? (
               <InlineSlotEditor
                 match={m}
                 onSave={handleSlotChange}
@@ -49,11 +53,17 @@ export default function RoundRobinView({ tournament, onUpdate }) {
             ) : (
               <>
                 <div className="court-label">Court {m.court}</div>
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <div className="row-actions">
                   <span className={`status-pill ${statusClass[m.status]}`}>{m.status}</span>
-                  <button className="secondary" onClick={() => setEditingId(m.matchRefId)}>
-                    Edit
-                  </button>
+                  {isAdmin && (
+                    <button
+                      className="secondary"
+                      onClick={() => setEditingId(m.matchRefId)}
+                      aria-label={`Edit ${m.teamA} versus ${m.teamB}`}
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -74,16 +84,18 @@ function InlineSlotEditor({ match, onSave, onCancel, maxCourt }) {
         type="number"
         value={slot}
         onChange={(e) => setSlot(e.target.value)}
-        style={{ width: 60 }}
+        aria-label="Time slot"
+        style={{ width: 72 }}
       />
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="row-actions">
         <input
           type="number"
           min="0"
           max={maxCourt}
           value={court}
           onChange={(e) => setCourt(e.target.value)}
-          style={{ width: 50 }}
+          aria-label="Court"
+          style={{ width: 62 }}
         />
         <button className="primary" onClick={() => onSave(match, slot, court)}>
           Save
