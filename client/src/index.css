@@ -1662,3 +1662,146 @@ button.danger-solid:hover {
     justify-content: flex-start;
   }
 }
+
+/* ==========================================================================
+   HERO MEDIA
+   The reference runs photography full-bleed behind its display type, killed
+   back hard so the words stay readable. Same treatment here: the photo is
+   desaturated, dimmed and faded out toward the text, so it reads as
+   atmosphere rather than as the subject — which also keeps a single-sport
+   photograph from implying this is a single-sport tool.
+   ========================================================================== */
+
+.masthead {
+  position: relative;
+  padding: 8px 0 56px;
+  isolation: isolate;
+}
+
+.masthead-media {
+  position: absolute;
+  /* Bleeds past the shell gutter to the window edge on the right. */
+  inset: -24px calc(var(--gutter) * -1) 0 auto;
+  width: min(58%, 620px);
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.masthead-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.55) contrast(1.05) brightness(0.42);
+  /* Fades into the canvas on both axes so there is no hard photo edge. */
+  mask-image: linear-gradient(to left, #000 15%, transparent 92%),
+    linear-gradient(to top, transparent 2%, #000 38%);
+  mask-composite: intersect;
+  -webkit-mask-image: linear-gradient(to left, #000 15%, transparent 92%),
+    linear-gradient(to top, transparent 2%, #000 38%);
+  -webkit-mask-composite: source-in;
+}
+
+/* A wash of the canvas colour over the photo keeps the green of real grass
+   from competing with the one accent the palette allows. */
+.masthead-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    var(--canvas) 8%,
+    color-mix(in srgb, var(--canvas) 62%, transparent) 55%,
+    color-mix(in srgb, var(--canvas) 38%, transparent) 100%
+  );
+}
+
+.masthead-body {
+  position: relative;
+}
+
+@media (max-width: 860px) {
+  /* At this width the type would sit on top of the busiest part of the
+     photograph. Pushing it to a band behind the headline keeps contrast. */
+  .masthead-media {
+    width: 100%;
+    inset: -24px calc(var(--gutter) * -1) auto;
+    height: 260px;
+  }
+
+  .masthead-media img {
+    filter: grayscale(0.55) contrast(1.05) brightness(0.3);
+    mask-image: linear-gradient(to top, transparent 4%, #000 60%);
+    -webkit-mask-image: linear-gradient(to top, transparent 4%, #000 60%);
+  }
+}
+
+/* ==========================================================================
+   EXPLAINER — the conflict graph, drawn
+   ========================================================================== */
+
+.explainer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  gap: 48px;
+  align-items: center;
+}
+
+.explainer-text h2 {
+  margin: 12px 0 18px;
+}
+
+.explainer-text p {
+  color: var(--ink-dim);
+  font-size: 14px;
+  max-width: 46ch;
+}
+
+.schedule-graphic {
+  margin: 0;
+}
+
+.schedule-graphic svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.schedule-graphic figcaption {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  line-height: 1.7;
+}
+
+.graphic-key {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.graphic-key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 860px) {
+  .explainer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .schedule-graphic {
+    max-width: 420px;
+  }
+}

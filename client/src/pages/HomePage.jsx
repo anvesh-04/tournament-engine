@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listTournaments, errorMessage } from "../api.js";
 import { useAuth } from "../auth.jsx";
+import ScheduleGraphic from "../components/ScheduleGraphic.jsx";
 
 export default function HomePage() {
   const [tournaments, setTournaments] = useState(null);
@@ -17,17 +18,39 @@ export default function HomePage() {
 
   return (
     <div>
+      {/* The photograph is atmosphere, not subject: it sits under a heavy
+          scrim so the type stays the thing you read, which is how the
+          reference build treats its own imagery. */}
       <section className="masthead">
-        <p className="eyebrow">Fixture scheduling</p>
-        <h1 className="display-xl">
-          Every fixture,
-          <br />
-          no clashes.
-        </h1>
-        <p className="masthead-sub">
-          Round-robin schedules built by graph coloring, knockout brackets ordered
-          by topological sort, and every edit checked against both before it lands.
-        </p>
+        <div className="masthead-media" aria-hidden="true">
+          <img src="/img/hero-field.jpg" alt="" fetchPriority="high" />
+        </div>
+        <div className="masthead-body">
+          <p className="eyebrow">Fixture scheduling</p>
+          <h1 className="display-xl">
+            Every fixture,
+            <br />
+            no clashes.
+          </h1>
+          <p className="masthead-sub">
+            Round-robin schedules built by graph coloring, knockout brackets ordered
+            by topological sort, and every edit checked against both before it lands.
+          </p>
+        </div>
+      </section>
+
+      <section className="panel explainer">
+        <div className="explainer-text">
+          <p className="eyebrow">How the schedule is built</p>
+          <h2 className="display-md">One team, one place, one time.</h2>
+          <p>
+            Every pair of teams that must meet becomes an edge. Two fixtures that
+            share a team cannot share a time slot, so the scheduler colours the
+            graph — each colour is a slot. A clash is not something the system
+            catches afterwards; it is something the colouring cannot express.
+          </p>
+        </div>
+        <ScheduleGraphic />
       </section>
 
       <section className="panel">
